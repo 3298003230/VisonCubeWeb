@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080a10">
+  <title>VisonCube</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./prototype.js" defer></script>
+</head>
+<body data-auth="guest" data-page="home">
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <div class="ambient ambient-left" aria-hidden="true"></div>
+  <div class="ambient ambient-right" aria-hidden="true"></div>
+
+  <header class="guest-header guest-only">
+    <a class="brand" href="./" aria-label="VisonCube">
+      <span>VisonCube</span>
+    </a>
+  </header>
+
+  <main class="guest-main guest-only" id="guest-content">
+    <section class="auth-shell" aria-labelledby="auth-title">
+      <div class="auth-visual" aria-hidden="true">
+        <div class="brand-field">
+          <div class="field-header"><span>VISONCUBE</span><span>统一账户</span></div>
+          <div class="field-wordmark">VisonCube</div>
+          <div class="field-track"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="visual-summary">
+          <h1>登录后继续访问 VisonCube。</h1>
+          <div class="signal-status"><span></span>账户服务正常</div>
+        </div>
+      </div>
+
+      <div class="auth-panel">
+        <div class="auth-heading">
+          <p>欢迎回来</p>
+          <h2 id="auth-title">登录 VisonCube</h2>
+        </div>
+
+        <div class="auth-tabs" role="tablist" aria-label="登录方式">
+          <button class="active" type="button" role="tab" aria-selected="true">密码登录</button>
+          <button type="button" role="tab" aria-selected="false">验证码登录</button>
+        </div>
+
+        <form class="auth-form">
+          <label>
+            <span>用户名或邮箱</span>
+            <input type="text" autocomplete="username" placeholder="请输入用户名或邮箱">
+          </label>
+          <label>
+            <span>密码</span>
+            <input type="password" autocomplete="current-password" placeholder="请输入密码">
+          </label>
+          <div class="auth-options">
+            <label class="remember"><input type="checkbox"> <span>保持登录</span></label>
+            <a href="#forgot">找回密码</a>
+          </div>
+          <button class="auth-submit" type="submit">登录</button>
+        </form>
+
+        <p class="register-link">还没有账户？<a href="#register">注册账户</a></p>
+      </div>
+    </section>
+  </main>
+
+  <header class="site-header member-only">
+    <a class="brand" href="?state=member&page=home" aria-label="VisonCube 首页">
+      <span>VisonCube</span>
+    </a>
+
+    <nav class="main-nav" aria-label="主导航">
+      <a data-page-link="home" href="?state=member&page=home">首页</a>
+      <a data-page-link="guanshan" href="?state=member&page=guanshan">观山</a>
+      <a data-page-link="tingyu" href="?state=member&page=tingyu">听雨</a>
+      <a data-page-link="zhufeng" href="?state=member&page=zhufeng">逐风</a>
+    </nav>
+
+    <a class="account-link" href="#account">账户</a>
+
+    <details class="mobile-menu">
+      <summary>目录</summary>
+      <nav aria-label="移动端主导航">
+        <a data-page-link="home" href="?state=member&page=home">首页</a>
+        <a data-page-link="guanshan" href="?state=member&page=guanshan">观山</a>
+        <a data-page-link="tingyu" href="?state=member&page=tingyu">听雨</a>
+        <a data-page-link="zhufeng" href="?state=member&page=zhufeng">逐风</a>
+        <a href="#account">账户</a>
+      </nav>
+    </details>
+  </header>
+
+  <main class="member-only" id="main-content">
+    <section class="hero page-view" data-view="home" aria-labelledby="hero-title">
+      <div class="hero-intro">
+        <h1 id="hero-title">选择一个产品。</h1>
+        <p class="hero-copy">观山、听雨、逐风，共用当前 VisonCube 账户。</p>
+      </div>
+
+      <div class="product-stage" id="products">
+        <div class="stage-toolbar">
+          <h2>产品</h2>
+          <p>观山 / 听雨 / 逐风</p>
+        </div>
+
+        <div class="stage-content">
+          <a class="product product-tv" href="?state=member&page=guanshan">
+            <div class="product-art tv-art" aria-hidden="true">
+              <div class="mountain mountain-back"></div>
+              <div class="mountain mountain-front"></div>
+              <div class="play-orbit"><span>▶</span></div>
+            </div>
+            <div class="product-meta">
+              <div><p class="product-name">观山</p><p>VisonCube-TV</p></div>
+              <span>Android</span>
+            </div>
+          </a>
+
+          <a class="product product-music" href="?state=member&page=tingyu">
+            <div class="music-head">
+              <div class="music-identity"><span>正在聆听</span><strong>音乐播放与云端同步</strong></div>
+              <span class="music-control" aria-hidden="true">Ⅱ</span>
+            </div>
+            <div class="waveform" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div class="progress" aria-hidden="true"><span></span></div>
+            <div class="product-meta">
+              <div><p class="product-name">听雨</p><p>VisonCube-Music</p></div>
+              <span>Android、Windows</span>
+            </div>
+          </a>
+
+          <a class="product product-ai" href="?state=member&page=zhufeng">
+            <div class="product-art ai-art" aria-hidden="true">
+              <div class="wind-line wind-one"></div>
+              <div class="wind-line wind-two"></div>
+              <div class="wind-line wind-three"></div>
+              <div class="ai-core">AI</div>
+            </div>
+            <div class="product-meta">
+              <div><p class="product-name">逐风</p><p>VisonCube-AI</p></div>
+              <span>Windows</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-page page-view" data-view="product" aria-labelledby="product-title" hidden>
+      <a class="back-link" href="?state=member&page=home"><span aria-hidden="true">←</span> 返回首页</a>
+
+      <div class="product-hero">
+        <div class="product-copy">
+          <p class="product-eyebrow" data-product-software></p>
+          <h1 id="product-title" data-product-name></h1>
+          <p class="product-description" data-product-description></p>
+          <div class="product-tags" data-product-tags aria-label="支持平台"></div>
+        </div>
+
+        <div class="product-showcase" aria-hidden="true">
+          <div class="scene-grid"></div>
+          <div class="scene-mountain scene-mountain-back"></div>
+          <div class="scene-mountain scene-mountain-front"></div>
+          <div class="scene-screen"><span>16:9</span></div>
+          <div class="scene-rain scene-rain-one"></div>
+          <div class="scene-rain scene-rain-two"></div>
+          <div class="scene-rain scene-rain-three"></div>
+          <div class="scene-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="scene-wind scene-wind-one"></div>
+          <div class="scene-wind scene-wind-two"></div>
+          <div class="scene-wind scene-wind-three"></div>
+          <div class="scene-core" data-scene-core></div>
+          <p class="scene-name" data-scene-name></p>
+        </div>
+      </div>
+
+      <section class="release-section" aria-labelledby="download-title">
+        <div class="release-heading">
+          <div>
+            <h2 id="download-title">版本与下载</h2>
+            <p>下载信息由 VisonCube 发布服务统一提供。</p>
+          </div>
+          <span class="release-source">linux.sjmf.xyz</span>
+        </div>
+        <div class="release-list" data-release-list aria-live="polite"></div>
+      </section>
+
+      <p class="prototype-note">当前为视觉原型，下载按钮不会连接生产环境。</p>
+    </section>
+  </main>
+
+  <template id="release-row-template">
+    <article class="release-row">
+      <div class="release-platform">
+        <span class="platform-mark" aria-hidden="true"></span>
+        <div>
+          <h3 data-release-platform></h3>
+          <p data-release-package></p>
+        </div>
+      </div>
+      <div class="release-meta">
+        <strong data-release-version></strong>
+        <span data-release-date></span>
+      </div>
+      <div class="release-message" data-release-message></div>
+      <a class="release-action" data-release-link href="#"></a>
+      <button class="release-action release-button" data-release-button type="button" hidden></button>
+    </article>
+  </template>
+</body>
+</html>

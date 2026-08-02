@@ -1,0 +1,38 @@
+:root {
+  color-scheme: dark;
+  --background: #080a10;
+  --background: oklch(0.13 0.012 260);
+  --surface-low: #0b0e14;
+  --surface-low: oklch(0.155 0.013 260);
+  --surface: #11141c;
+  --surface: oklch(0.18 0.014 260);
+  --surface-raised: #191d27;
+  --surface-raised: oklch(0.23 0.016 260);
+  --text: #e8eaf0;
+  --text: oklch(0.92 0.008 255);
+  --muted: #9da2b0;
+  --muted: oklch(0.69 0.014 255);
+  --faint: #747b89;
+  --faint: oklch(0.56 0.014 255);
+  --border: rgb(232 234 240 / 0.11);
+  --border-strong: rgb(232 234 240 / 0.19);
+  --accent: #f06465;
+  --accent: oklch(0.68 0.18 25);
+  --accent-hover: #fb7474;
+  --mountain: #63ac83;
+  --mountain: oklch(0.67 0.09 155);
+  --rain: #5dc3d5;
+  --rain: oklch(0.73 0.11 218);
+  --wind: #a28be0;
+  --wind: oklch(0.72 0.11 285);
+  --danger: #e48a8c;
+  --success: #78c79a;
+  --radius-panel: 24px;
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --shadow-panel: 0 28px 84px rgb(3 5 12 / 0.38);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: var(--background);
+  color: var(--text);
+}
