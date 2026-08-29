@@ -1,5 +1,10 @@
 # 当前进度
 
+## 2026-08-29（观山 TV 1.4.5 网站与下载分发）
+- 官网下载区新增 Android 手机、Android TV ARM64 和 Android TV `armeabi-v7a` 三个观山下载卡片；TV 1.4.5 两个包使用独立的 COS 目录 `VisonCube/TV/1.4.5/`。
+- 生产发布清单已将 TV 两个 1.4.5 条目切换到 `download.sjmf.xyz`，旧 TV 包和旧发布清单已保留备份；手机版、Music 和 AI 条目未改变。
+- `npm.cmd run build`、发布清单测试和公网 API、COS HTTP 200/206、完整 SHA-256 校验已通过；真实电视设备内更新与安装仍需单独验收。
+
 ## 2026-08-02（观山场景轻量化）
 - 已移除正式样式和 prototype 样式对 `guanshan-scene.png` 的引用，观山恢复为与听雨、逐风一致的 CSS 抽象场景。
 - 构建产物不再包含 1.6MB 山景图片，dist 总大小约 150KB。

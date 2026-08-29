@@ -1,7 +1,13 @@
 export type ProductId = 'guanshan' | 'tingyu' | 'zhufeng'
 
 export interface ProductReleaseDefinition {
-  clientId: 'tv-android' | 'music-android' | 'music-windows' | 'ai-windows'
+  clientId:
+    | 'tv-android'
+    | 'tv-android-leanback'
+    | 'tv-android-leanback-v7a'
+    | 'music-android'
+    | 'music-windows'
+    | 'ai-windows'
   platform: string
   packageType: string
   actionLabel: string
@@ -23,14 +29,26 @@ export const products: Record<ProductId, ProductDefinition> = {
     name: '观山',
     software: 'VisonCube-TV',
     description: '把影视内容留在熟悉的屏幕里，专注观看、搜索与播放。',
-    tags: ['Android', 'arm64-v8a'],
+    tags: ['Android', 'Android TV', '双架构'],
     sceneCore: '▶',
     releases: [
       {
         clientId: 'tv-android',
-        platform: 'Android',
+        platform: 'Android 手机',
         packageType: 'APK / arm64-v8a',
-        actionLabel: '下载 Android 版',
+        actionLabel: '下载手机版',
+      },
+      {
+        clientId: 'tv-android-leanback',
+        platform: 'Android TV',
+        packageType: 'APK / 64 位 arm64-v8a',
+        actionLabel: '下载电视 64 位版',
+      },
+      {
+        clientId: 'tv-android-leanback-v7a',
+        platform: 'Android TV',
+        packageType: 'APK / 32 位 armeabi-v7a',
+        actionLabel: '下载电视 32 位版',
       },
     ],
   },

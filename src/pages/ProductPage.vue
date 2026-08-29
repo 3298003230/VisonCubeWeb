@@ -47,7 +47,7 @@ const product = computed(() => products[props.productId])
           <h2 id="download-title">版本与下载</h2>
           <p>下载信息由 VisonCube 发布服务统一提供。</p>
         </div>
-        <span class="release-source">linux.sjmf.xyz</span>
+        <span class="release-source">download.sjmf.xyz</span>
       </div>
       <div class="release-list">
         <ReleaseDownloadCard
