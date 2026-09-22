@@ -7,7 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from fastapi.testclient import TestClient
 
 from app import Principal, Settings, create_app
@@ -27,8 +29,8 @@ def decode_base64url(value: str) -> bytes:
 
 @pytest.fixture
 def service(tmp_path: Path):
-    signing_key = Ed25519PrivateKey.generate()
-    signing_bytes = signing_key.private_bytes_raw()
+    signing_key = ec.generate_private_key(ec.SECP256R1())
+    signing_bytes = signing_key.private_numbers().private_value.to_bytes(32, "big")
     settings = Settings(
         database_path=tmp_path / "licenses.db",
         auth_me_url="http://unused.test/api/auth/me",
@@ -192,7 +194,13 @@ def test_lease_requires_time_and_has_a_valid_signature(service) -> None:
     result = lease.json()
     payload_bytes = decode_base64url(result["payload"])
     signature = decode_base64url(result["signature"])
-    public_key.verify(signature, payload_bytes)
+    signature_r = int.from_bytes(signature[:32], "big")
+    signature_s = int.from_bytes(signature[32:], "big")
+    public_key.verify(
+        encode_dss_signature(signature_r, signature_s),
+        payload_bytes,
+        ec.ECDSA(hashes.SHA256()),
+    )
     payload = json.loads(payload_bytes)
     assert payload["sub"] == 20
     assert payload["issued_at"] == clock.value

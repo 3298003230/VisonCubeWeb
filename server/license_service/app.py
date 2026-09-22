@@ -18,8 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
@@ -536,11 +537,15 @@ def create_app(
     active_settings = settings or Settings.from_environment()
     clock = now or (lambda: int(time.time()))
     store = LicenseStore(active_settings, clock)
-    signing_key = Ed25519PrivateKey.from_private_bytes(active_settings.signing_private_key)
-    public_key = signing_key.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
+    try:
+        signing_key = ec.derive_private_key(
+            int.from_bytes(active_settings.signing_private_key, "big"),
+            ec.SECP256R1(),
+        )
+    except ValueError as error:
+        raise RuntimeError("LICENSE_SIGNING_PRIVATE_KEY_B64 不是有效的 P-256 私钥") from error
+    public_numbers = signing_key.public_key().public_numbers()
+    public_key = public_numbers.x.to_bytes(32, "big") + public_numbers.y.to_bytes(32, "big")
     key_id = hashlib.sha256(public_key).hexdigest()[:16]
     resolve_auth = auth_resolver or (lambda token: _remote_auth_resolver(active_settings, token))
     limiter = SlidingWindowLimiter(limit=10, window_seconds=60)
@@ -558,7 +563,11 @@ def create_app(
 
     @app.get("/api/licenses/public-key")
     def public_signing_key() -> dict[str, str]:
-        return {"algorithm": "Ed25519", "key_id": key_id, "public_key": _base64url(public_key)}
+        return {
+            "algorithm": "ECDSA-P256-SHA256",
+            "key_id": key_id,
+            "public_key": _base64url(public_key),
+        }
 
     @app.get("/api/licenses/me")
     def my_license(principal: Principal = Depends(authenticated_user)) -> dict[str, object]:
@@ -602,9 +611,11 @@ def create_app(
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
-        signature = signing_key.sign(encoded_payload)
+        der_signature = signing_key.sign(encoded_payload, ec.ECDSA(hashes.SHA256()))
+        signature_r, signature_s = decode_dss_signature(der_signature)
+        signature = signature_r.to_bytes(32, "big") + signature_s.to_bytes(32, "big")
         return {
-            "algorithm": "Ed25519",
+            "algorithm": "ECDSA-P256-SHA256",
             "key_id": key_id,
             "payload": _base64url(encoded_payload),
             "signature": _base64url(signature),
