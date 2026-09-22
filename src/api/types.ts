@@ -42,3 +42,44 @@ export interface ClientReleaseInfo {
   changelog?: string
   published_at?: string
 }
+
+export type LicensePlan = 'day' | 'week' | 'month'
+
+export type LicenseState = 'none' | 'active' | 'expired' | 'unlimited'
+
+export interface LicenseStatus {
+  state: LicenseState
+  is_unlimited: boolean
+  activated_at: string | null
+  expires_at: string | null
+  server_time: string
+  remaining_seconds: number | null
+}
+
+export interface RedeemLicenseResponse {
+  message: string
+  license: LicenseStatus
+}
+
+export interface LicenseBatchSummary {
+  id: string
+  plan: LicensePlan
+  quantity: number
+  unused_count: number
+  redeemed_count: number
+  revoked_count: number
+  note: string | null
+  created_at: string
+  created_by: string
+}
+
+export interface CreateLicenseBatchRequest {
+  plan: LicensePlan
+  quantity: number
+  note?: string
+}
+
+export interface CreateLicenseBatchResponse {
+  batch: LicenseBatchSummary
+  codes: string[]
+}

@@ -3,6 +3,7 @@ import { authState, ensureSessionRestored, hasVerifiedEmail } from '../auth/sess
 import AccountPage from '../pages/AccountPage.vue'
 import ChangePasswordPage from '../pages/ChangePasswordPage.vue'
 import HomePage from '../pages/HomePage.vue'
+import LicenseAdminPage from '../pages/LicenseAdminPage.vue'
 import ProductPage from '../pages/ProductPage.vue'
 import EmailVerificationPage from '../pages/auth/EmailVerificationPage.vue'
 import LoginPage from '../pages/auth/LoginPage.vue'
@@ -15,6 +16,7 @@ declare module 'vue-router' {
     guestOnly?: boolean
     requiresAuth?: boolean
     allowUnverifiedEmail?: boolean
+    requiresLicenseAdmin?: boolean
     title?: string
   }
 }
@@ -91,6 +93,17 @@ export const router = createRouter({
       component: ChangePasswordPage,
       meta: { layout: 'app', requiresAuth: true, title: '修改密码' },
     },
+    {
+      path: '/account/licenses',
+      name: 'license-admin',
+      component: LicenseAdminPage,
+      meta: {
+        layout: 'app',
+        requiresAuth: true,
+        requiresLicenseAdmin: true,
+        title: '卡密管理',
+      },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
@@ -114,6 +127,10 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !to.meta.allowUnverifiedEmail && !verified) {
     return { name: 'verify-email' }
+  }
+
+  if (to.meta.requiresLicenseAdmin && session?.user.username !== '3298003230') {
+    return { name: 'account' }
   }
 
   if (to.meta.guestOnly && session) {

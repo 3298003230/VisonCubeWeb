@@ -1191,10 +1191,41 @@ button:disabled {
 .release-row[data-state="error"] .release-message { color: var(--danger); }
 .release-row[data-state="loading"] .platform-mark { opacity: 0.42; }
 
-/* Account */
-.account-page { max-width: 860px; }
+/* Account and licensing */
+.account-page { max-width: 1040px; }
 .section-heading { margin: 16px 0 28px; }
 .compact-heading { margin-top: 0; }
+
+.account-heading,
+.admin-heading,
+.batch-ledger > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.account-heading h1,
+.admin-heading h1 { font-size: clamp(38px, 4vw, 52px); }
+
+.quiet-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out), color 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+
+.quiet-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  transform: translateY(-1px);
+}
 
 .account-notice {
   margin: -12px 0 18px;
@@ -1257,6 +1288,329 @@ button:disabled {
   background: #0d1017;
 }
 
+.license-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+  gap: 18px;
+}
+
+.license-overview,
+.redeem-panel,
+.license-generator,
+.generated-vault,
+.batch-ledger {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-low);
+  box-shadow: var(--shadow-panel);
+}
+
+.license-overview {
+  --license-color: var(--faint);
+  min-height: 408px;
+  padding: 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--license-color) 15%, transparent), transparent 28%),
+    linear-gradient(145deg, #11151e, #0a0d13 74%);
+}
+
+.license-overview[data-state="active"] { --license-color: var(--success); }
+.license-overview[data-state="unlimited"] { --license-color: var(--wind); }
+.license-overview[data-state="expired"] { --license-color: var(--danger); }
+
+.license-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.license-overview-head p,
+.vault-head p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 690;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.license-overview-head h2 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+}
+
+.license-state-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--license-color);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--license-color) 12%, transparent), 0 0 22px color-mix(in srgb, var(--license-color) 38%, transparent);
+}
+
+.license-description {
+  max-width: 500px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.license-timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 58px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.license-timeline::before {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  left: 8px;
+  height: 1px;
+  background: var(--border-strong);
+  content: '';
+}
+
+.license-timeline li { position: relative; min-width: 0; }
+
+.license-timeline li > span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 15px;
+  height: 15px;
+  margin-bottom: 18px;
+  border: 3px solid #11151e;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.license-timeline li.complete > span {
+  background: var(--license-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--license-color) 70%, transparent), 0 0 15px color-mix(in srgb, var(--license-color) 35%, transparent);
+}
+
+.license-timeline li div { display: grid; gap: 7px; }
+.license-timeline strong { font-size: 13px; font-weight: 680; }
+.license-timeline small { overflow: hidden; color: var(--faint); font-size: 10px; line-height: 1.5; text-overflow: ellipsis; }
+
+.redeem-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 28px;
+}
+
+.panel-kicker {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.redeem-panel h2,
+.license-generator h2,
+.generated-vault h2,
+.batch-ledger h2 {
+  margin: 8px 0 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.redeem-panel > p:not(.license-feedback),
+.generator-help {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.redeem-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.redeem-form label,
+.generator-fields label > span,
+.plan-selector legend {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.redeem-form input,
+.generator-fields input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  outline: 0;
+  background: #090c12;
+  color: var(--text);
+  transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.redeem-form input {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.redeem-form input:focus,
+.generator-fields input:focus {
+  border-color: rgb(240 100 101 / 0.58);
+  background: #0c0f16;
+  box-shadow: 0 0 0 3px rgb(240 100 101 / 0.08);
+}
+
+.redeem-form .primary-button { margin-top: 2px; }
+.license-feedback { margin: 14px 0 0; font-size: 12px; line-height: 1.55; }
+
+.admin-entry {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding: 17px 0 0;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  transition: color 180ms var(--ease-out);
+}
+
+.admin-entry:hover { color: var(--accent-hover); }
+.admin-entry span { font-size: 13px; font-weight: 680; }
+.admin-entry small { color: var(--faint); font-size: 11px; }
+.account-profile-panel { margin-top: 18px; }
+
+.license-admin-page { max-width: 1180px; }
+.admin-identity {
+  padding: 9px 12px;
+  border: 1px solid rgb(162 139 224 / 0.22);
+  border-radius: 999px;
+  background: rgb(162 139 224 / 0.07);
+  color: #c5b7ec;
+  font-size: 11px;
+}
+
+.license-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 18px;
+}
+
+.license-generator,
+.generated-vault { min-height: 476px; padding: 28px; }
+
+.plan-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: 26px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.plan-selector legend { margin-bottom: 10px; }
+
+.plan-selector label {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  min-height: 82px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: #0b0e14;
+  cursor: pointer;
+  transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+
+.plan-selector label:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.plan-selector label.selected { border-color: rgb(240 100 101 / 0.48); background: rgb(240 100 101 / 0.075); }
+.plan-selector input { position: absolute; opacity: 0; pointer-events: none; }
+.plan-selector strong { font-size: 14px; }
+.plan-selector small { color: var(--faint); font-size: 11px; }
+
+.generator-fields { display: grid; grid-template-columns: 0.58fr 1.42fr; gap: 10px; margin-top: 18px; }
+.generator-fields label { display: grid; gap: 8px; }
+.generator-submit { margin-top: 20px; }
+
+.generated-vault {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  background:
+    linear-gradient(rgb(232 234 240 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(232 234 240 / 0.025) 1px, transparent 1px),
+    #0b0e14;
+  background-size: 32px 32px;
+}
+
+.generated-vault.populated { border-color: rgb(120 199 154 / 0.24); }
+.vault-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.vault-head > span { color: var(--faint); font-size: 10px; letter-spacing: 0.08em; }
+
+.code-vault-list {
+  display: grid;
+  gap: 7px;
+  max-height: 272px;
+  margin-top: 22px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.code-vault-list code {
+  display: block;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgb(8 10 16 / 0.8);
+  color: #dce2ee;
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
+.vault-empty { margin: auto 0; color: var(--faint); font-size: 13px; line-height: 1.65; text-align: center; }
+.vault-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; padding-top: 20px; }
+.vault-actions .secondary-button { min-width: 0; }
+.admin-message { margin: 18px 0 0; }
+
+.license-admin-error {
+  margin: 18px 0 0;
+  padding: 13px 15px;
+  border: 1px solid rgb(228 138 140 / 0.24);
+  border-radius: var(--radius-control);
+  background: rgb(228 138 140 / 0.07);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.batch-ledger { margin-top: 18px; overflow: hidden; }
+.batch-ledger > header { padding: 24px 26px; border-bottom: 1px solid var(--border); }
+.batch-table-wrap { overflow-x: auto; }
+.batch-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.batch-table th { padding: 13px 18px; border-bottom: 1px solid var(--border); color: var(--faint); font-size: 10px; font-weight: 650; letter-spacing: 0.06em; white-space: nowrap; }
+.batch-table td { padding: 16px 18px; border-bottom: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.batch-table tbody tr:last-child td { border-bottom: 0; }
+.batch-table tbody tr:hover { background: rgb(232 234 240 / 0.018); }
+.batch-table td:first-child { display: grid; gap: 5px; min-width: 178px; }
+.batch-table td:first-child strong { max-width: 220px; overflow: hidden; color: var(--text); font-size: 12px; text-overflow: ellipsis; }
+.batch-table td:first-child small { color: var(--faint); font-family: "Cascadia Mono", Consolas, monospace; font-size: 9px; }
+.plan-badge { padding: 5px 8px; border: 1px solid rgb(240 100 101 / 0.2); border-radius: 999px; background: rgb(240 100 101 / 0.06); color: var(--accent-hover); }
+.ledger-empty { margin: 0; padding: 42px 24px; color: var(--faint); font-size: 13px; text-align: center; }
+
 .settings-form {
   display: grid;
   gap: 20px;
@@ -1279,6 +1633,11 @@ button:disabled {
   .field-wordmark { font-size: clamp(46px, 6.7vw, 64px); }
 
   .release-row { grid-template-columns: minmax(190px, 1fr) minmax(210px, 1fr) auto; gap: 16px; }
+  .license-layout,
+  .license-admin-grid { grid-template-columns: 1fr; }
+  .license-overview,
+  .license-generator,
+  .generated-vault { min-height: 0; }
 }
 
 @media (max-width: 680px) {
@@ -1350,6 +1709,19 @@ button:disabled {
   .release-action { grid-column: 2; grid-row: 1 / span 2; min-width: 118px; align-self: center; padding: 0 13px; }
 
   .section-heading { margin: 8px 0 22px; }
+  .account-heading,
+  .admin-heading { align-items: center; }
+  .account-heading h1,
+  .admin-heading h1 { font-size: 36px; }
+  .license-overview,
+  .redeem-panel,
+  .license-generator,
+  .generated-vault { padding: 22px 20px; border-radius: 20px; }
+  .license-timeline { gap: 10px; margin-top: 42px; }
+  .license-timeline small { font-size: 9px; }
+  .generator-fields { grid-template-columns: 1fr; }
+  .batch-ledger { border-radius: 20px; }
+  .batch-ledger > header { padding: 20px; }
   .account-panel, .settings-form { border-radius: 20px; }
   .account-identity { padding: 24px 20px; }
   .account-details > div { grid-template-columns: 1fr; gap: 8px; padding: 18px 20px; }
@@ -1366,6 +1738,11 @@ button:disabled {
   .release-row { grid-template-columns: 1fr; }
   .release-action { grid-column: 1; grid-row: auto; width: 100%; }
   .account-actions, .form-actions { grid-template-columns: 1fr; }
+  .account-heading,
+  .admin-heading { align-items: flex-start; flex-direction: column; }
+  .plan-selector { grid-template-columns: 1fr; }
+  .plan-selector label { min-height: 68px; }
+  .vault-actions { grid-template-columns: 1fr; }
 }
 
 @media (pointer: coarse) {

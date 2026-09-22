@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { authState } from '../auth/session'
 
 const route = useRoute()
 const menu = ref<HTMLDetailsElement | null>(null)
@@ -9,6 +10,8 @@ const currentPageName = computed(() => {
   if (route.name === 'change-password') return '账户'
   return typeof route.meta.title === 'string' ? route.meta.title : '首页'
 })
+
+const isLicenseAdmin = computed(() => authState.session?.user.username === '3298003230')
 
 const closeMenu = () => {
   if (menu.value) menu.value.open = false
@@ -30,6 +33,7 @@ const navItems = [
       <RouterLink v-for="item in navItems" :key="item.name" :to="{ name: item.name }">
         {{ item.label }}
       </RouterLink>
+      <RouterLink v-if="isLicenseAdmin" :to="{ name: 'license-admin' }">卡密</RouterLink>
     </nav>
 
     <RouterLink class="account-link" :class="{ active: route.name === 'change-password' }" to="/account">
@@ -44,6 +48,7 @@ const navItems = [
           {{ item.label }}
         </RouterLink>
         <RouterLink to="/account" @click="closeMenu">账户</RouterLink>
+        <RouterLink v-if="isLicenseAdmin" to="/account/licenses" @click="closeMenu">卡密管理</RouterLink>
       </nav>
     </details>
   </header>
