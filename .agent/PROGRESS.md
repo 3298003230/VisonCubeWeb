@@ -1,5 +1,11 @@
 # 当前进度
 
+## 2026-09-29（统一新域名与三产品发布）
+
+- 官网、产品文档和下载展示已切换到 `visoncube.cn` / `linux.visoncube.cn` / `download.visoncube.cn`，提交 `fc6fcee` 已推送。
+- TypeScript 类型检查、Vite 生产构建、许可服务 Python 编译与 16 项测试通过；构建产物部署到 `/var/www/visoncube-web`，部署前备份位于 `/home/ubuntu/ServerCode/VisonCube/update/backups/web-20260929T1500Z`。
+- 官网、同源 API、许可健康接口和认证服务健康接口均返回 200。生产发布清单已提供 TV `1.5.1`、Music `2.13.9`、AI `1.3.9`，下载链接均为新域名并通过文件长度与 Range 206 验证。
+
 ## 2026-08-29（观山 TV 1.4.5 网站与下载分发）
 - 官网下载区新增 Android 手机、Android TV ARM64 和 Android TV `armeabi-v7a` 三个观山下载卡片；TV 1.4.5 两个包使用独立的 COS 目录 `VisonCube/TV/1.4.5/`。
 - 生产发布清单已将 TV 两个 1.4.5 条目切换到 `download.sjmf.xyz`，旧 TV 包和旧发布清单已保留备份；手机版、Music 和 AI 条目未改变。
@@ -45,9 +51,9 @@
 
 ## 当前状态
 
-- 正式 Web 工程已构建并部署到 `https://sjmf.xyz`，Nginx 将同源 `/api/` 转发到现有认证与发布服务。
-- 当前下载清单由服务器接口提供：TV `1.3.8`，Music Android/Windows `2.13.0`；AI 下载入口继续保持未发布状态。
-- 已验证网站首页、发布接口、HTTP 到 HTTPS 跳转以及静态资源均可访问。
+- 正式 Web 工程已构建并部署到 `https://visoncube.cn`，Nginx 将同源 `/api/` 转发到现有认证与发布服务。
+- 当前下载清单由服务器接口提供：TV `1.5.1`、Music Android/Windows `2.13.9`、AI Windows `1.3.9`。
+- 已验证网站首页、发布接口、健康接口、HTTPS 静态资源和新下载域名均可访问。
 
 ## 推荐下一步
 

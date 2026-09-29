@@ -6,9 +6,9 @@ VisonCubeWeb 是 VisonCube 的统一官网和账户入口，展示首页、观�
 
 ## 当前状态
 
-- 项目目录：`D:\Code\VisonCube\VisonCubeWeb`
+- 项目目录：`D:\Code\VisonCube\Web`
 - 当前为 Vue 3、TypeScript、Vite 工程，包含产品文档、设计规范、认证流程、首页和三个产品页。
-- 已接入发布 API 并部署线上，主站地址为 `https://sjmf.xyz`。
+- 已接入发布 API 并部署线上，主站地址为 `https://visoncube.cn`；认证与更新服务为 `https://linux.visoncube.cn`，安装包分发为 `https://download.visoncube.cn`。
 - 页面命名：`首页`、`观山`（VisonCube-TV）、`听雨`（VisonCube-Music）、`逐风`（VisonCube-AI）。
 - 默认入口为未登录状态：顶部只显示 `VisonCube` 和登录界面；产品导航与页面登录后才可见。
 - 网站不显示软件图标或版本相关软件图片，只使用 VisonCube、观山、听雨、逐风名称及固定视觉语言。

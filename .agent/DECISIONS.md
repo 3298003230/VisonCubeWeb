@@ -1,5 +1,11 @@
 # 当前有效决策
 
+## 统一使用 VisonCube 新域名
+
+- 官网使用 `https://visoncube.cn`，认证与更新 API 使用 `https://linux.visoncube.cn`，公开安装包使用 `https://download.visoncube.cn`。
+- 官网不写死产品版本和文件名，继续以发布 API 返回的 `download_url` 为准；旧域名仅作为历史客户端兼容，不再出现在当前网站构建产物中。
+- 发布文件先验证版本、签名、大小与 SHA-256，再上传 COS 并原子更新服务器清单；更新默认非强制。
+
 ## 页面命名与产品映射
 
 - 决策：首页为总入口；观山对应 VisonCube-TV；听雨对应 VisonCube-Music；逐风对应 VisonCube-AI。
