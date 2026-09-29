@@ -10,6 +10,7 @@ import sqlite3
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from collections import defaultdict, deque
@@ -21,7 +22,8 @@ from typing import Callable
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 
@@ -30,6 +32,7 @@ PLAN_SECONDS = {
     "week": 7 * 24 * 60 * 60,
     "month": 30 * 24 * 60 * 60,
 }
+MAX_AUTH_RESPONSE_BYTES = 64 * 1024
 
 
 def _decode_secret(value: str, name: str, minimum_bytes: int) -> bytes:
@@ -69,6 +72,19 @@ class Settings:
             raise RuntimeError("缺少 LICENSE_HMAC_SECRET_B64 或 LICENSE_SIGNING_PRIVATE_KEY_B64")
 
         admin_id_value = os.environ.get("LICENSE_ADMIN_USER_ID", "").strip()
+        signing_private_key = _decode_secret(
+            signing_value,
+            "LICENSE_SIGNING_PRIVATE_KEY_B64",
+            32,
+        )
+        if len(signing_private_key) != 32:
+            raise RuntimeError("LICENSE_SIGNING_PRIVATE_KEY_B64 必须正好是 32 字节")
+        try:
+            admin_user_id = int(admin_id_value) if admin_id_value else None
+        except ValueError as error:
+            raise RuntimeError("LICENSE_ADMIN_USER_ID 必须是正整数") from error
+        if admin_user_id is not None and admin_user_id <= 0:
+            raise RuntimeError("LICENSE_ADMIN_USER_ID 必须是正整数")
         return cls(
             database_path=Path(os.environ.get("LICENSE_DATABASE_PATH", "./data/licenses.db")),
             auth_me_url=os.environ.get(
@@ -76,13 +92,9 @@ class Settings:
                 "http://127.0.0.1:8088/api/auth/me",
             ).strip(),
             hmac_secret=_decode_secret(hmac_value, "LICENSE_HMAC_SECRET_B64", 32),
-            signing_private_key=_decode_secret(
-                signing_value,
-                "LICENSE_SIGNING_PRIVATE_KEY_B64",
-                32,
-            )[:32],
+            signing_private_key=signing_private_key,
             admin_username=os.environ.get("LICENSE_ADMIN_USERNAME", "3298003230").strip(),
-            admin_user_id=int(admin_id_value) if admin_id_value else None,
+            admin_user_id=admin_user_id,
             lease_seconds=max(60, min(3600, int(os.environ.get("LICENSE_LEASE_SECONDS", "900")))),
             auth_timeout_seconds=max(
                 1.0,
@@ -108,24 +120,36 @@ class BatchCreateIn(BaseModel):
     note: str | None = Field(default=None, max_length=80)
 
 
+class RevokeIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=80)
+
+
 class SlidingWindowLimiter:
-    def __init__(self, limit: int, window_seconds: int) -> None:
+    def __init__(self, limit: int, window_seconds: int, max_keys: int = 10_000) -> None:
         self._limit = limit
         self._window_seconds = window_seconds
+        self._max_keys = max_keys
         self._entries: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
     def allow(self, key: str, now: float) -> bool:
         cutoff = now - self._window_seconds
         with self._lock:
+            if key not in self._entries and len(self._entries) >= self._max_keys:
+                for tracked_key in list(self._entries):
+                    tracked_entries = self._entries[tracked_key]
+                    while tracked_entries and tracked_entries[0] <= cutoff:
+                        tracked_entries.popleft()
+                    if not tracked_entries:
+                        del self._entries[tracked_key]
+                if len(self._entries) >= self._max_keys:
+                    return False
             entries = self._entries[key]
             while entries and entries[0] <= cutoff:
                 entries.popleft()
             if len(entries) >= self._limit:
                 return False
             entries.append(now)
-            if not entries:
-                self._entries.pop(key, None)
             return True
 
 
@@ -324,7 +348,66 @@ class LicenseStore:
         batch = self._batch_summary(batch_id)
         return {"batch": batch, "codes": codes}
 
-    def list_batches(self, principal: Principal, limit: int) -> list[dict[str, object]]:
+    def readiness(self) -> dict[str, bool]:
+        database_ready = False
+        try:
+            with self._connect() as connection:
+                database_ready = connection.execute("SELECT 1").fetchone() is not None
+        except sqlite3.Error:
+            database_ready = False
+        auth_url = urllib.parse.urlparse(self._settings.auth_me_url)
+        return {
+            "database": database_ready,
+            "admin_identity": self._settings.admin_user_id is not None
+            and self._settings.admin_user_id > 0
+            and bool(self._settings.admin_username),
+            "auth_endpoint": auth_url.scheme in {"http", "https"} and bool(auth_url.netloc),
+        }
+
+    def admin_overview(self, principal: Principal) -> dict[str, object]:
+        self.require_admin(principal)
+        now = self._now()
+        with self._connect() as connection:
+            batch_count = int(
+                connection.execute("SELECT COUNT(*) FROM license_batches").fetchone()[0]
+            )
+            code_counts = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_count,
+                    SUM(CASE WHEN status = 'unused' THEN 1 ELSE 0 END) AS unused_count,
+                    SUM(CASE WHEN status = 'redeemed' THEN 1 ELSE 0 END) AS redeemed_count,
+                    SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) AS revoked_count
+                FROM license_codes
+                """
+            ).fetchone()
+            entitlement_counts = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_count,
+                    SUM(CASE WHEN expires_at > ? THEN 1 ELSE 0 END) AS active_count,
+                    SUM(CASE WHEN expires_at <= ? THEN 1 ELSE 0 END) AS expired_count
+                FROM license_entitlements
+                """,
+                (now, now),
+            ).fetchone()
+        return {
+            "server_time": _utc_text(now),
+            "batch_count": batch_count,
+            "codes": {
+                "total": int(code_counts["total_count"] or 0),
+                "unused": int(code_counts["unused_count"] or 0),
+                "redeemed": int(code_counts["redeemed_count"] or 0),
+                "revoked": int(code_counts["revoked_count"] or 0),
+            },
+            "entitlements": {
+                "total": int(entitlement_counts["total_count"] or 0),
+                "active": int(entitlement_counts["active_count"] or 0),
+                "expired": int(entitlement_counts["expired_count"] or 0),
+            },
+        }
+
+    def list_batches(self, principal: Principal, limit: int, offset: int) -> list[dict[str, object]]:
         self.require_admin(principal)
         with self._connect() as connection:
             rows = connection.execute(
@@ -339,11 +422,249 @@ class LicenseStore:
                 JOIN license_codes c ON c.batch_id = b.id
                 GROUP BY b.id
                 ORDER BY b.created_at DESC, b.id DESC
-                LIMIT ?
+                LIMIT ? OFFSET ?
                 """,
-                (limit,),
+                (limit, offset),
             ).fetchall()
         return [self._batch_row(row) for row in rows]
+
+    def list_batch_codes(
+        self,
+        principal: Principal,
+        batch_id: str,
+        status_filter: str | None,
+        limit: int,
+        offset: int,
+    ) -> dict[str, object]:
+        self.require_admin(principal)
+        if status_filter is not None and status_filter not in {"unused", "redeemed", "revoked"}:
+            raise HTTPException(status_code=400, detail="卡密状态筛选无效")
+        with self._connect() as connection:
+            batch_exists = connection.execute(
+                "SELECT 1 FROM license_batches WHERE id = ?",
+                (batch_id,),
+            ).fetchone()
+            if batch_exists is None:
+                raise HTTPException(status_code=404, detail="卡密批次不存在")
+            where = "batch_id = ?"
+            parameters: list[object] = [batch_id]
+            if status_filter is not None:
+                where += " AND status = ?"
+                parameters.append(status_filter)
+            total = int(
+                connection.execute(
+                    f"SELECT COUNT(*) FROM license_codes WHERE {where}",
+                    parameters,
+                ).fetchone()[0]
+            )
+            rows = connection.execute(
+                f"""
+                SELECT id, batch_id, code_hint, status, redeemed_by_id, redeemed_at, revoked_at
+                FROM license_codes
+                WHERE {where}
+                ORDER BY id ASC
+                LIMIT ? OFFSET ?
+                """,
+                (*parameters, limit, offset),
+            ).fetchall()
+        return {
+            "items": [self._code_row(row) for row in rows],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
+
+    def list_entitlements(
+        self,
+        principal: Principal,
+        limit: int,
+        offset: int,
+    ) -> dict[str, object]:
+        self.require_admin(principal)
+        now = self._now()
+        with self._connect() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM license_entitlements").fetchone()[0])
+            rows = connection.execute(
+                """
+                SELECT user_id, username, activated_at, expires_at, updated_at
+                FROM license_entitlements
+                ORDER BY updated_at DESC, user_id ASC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+        items = []
+        for row in rows:
+            expires_at = int(row["expires_at"])
+            remaining = max(0, expires_at - now)
+            items.append(
+                {
+                    "user_id": int(row["user_id"]),
+                    "username": str(row["username"]),
+                    "state": "active" if remaining > 0 else "expired",
+                    "activated_at": _utc_text(int(row["activated_at"])),
+                    "expires_at": _utc_text(expires_at),
+                    "updated_at": _utc_text(int(row["updated_at"])),
+                    "remaining_seconds": remaining,
+                }
+            )
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+    def list_audit(
+        self,
+        principal: Principal,
+        limit: int,
+        offset: int,
+    ) -> dict[str, object]:
+        self.require_admin(principal)
+        with self._connect() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM license_audit").fetchone()[0])
+            rows = connection.execute(
+                """
+                SELECT id, event, actor_user_id, actor_username, target_user_id,
+                       batch_id, code_hint, created_at, details
+                FROM license_audit
+                ORDER BY created_at DESC, id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+        items = []
+        for row in rows:
+            try:
+                details = json.loads(str(row["details"]))
+            except (TypeError, ValueError):
+                details = {}
+            items.append(
+                {
+                    "id": int(row["id"]),
+                    "event": str(row["event"]),
+                    "actor_user_id": int(row["actor_user_id"]),
+                    "actor_username": str(row["actor_username"]),
+                    "target_user_id": int(row["target_user_id"]) if row["target_user_id"] is not None else None,
+                    "batch_id": str(row["batch_id"]) if row["batch_id"] is not None else None,
+                    "code_hint": str(row["code_hint"]) if row["code_hint"] is not None else None,
+                    "created_at": _utc_text(int(row["created_at"])),
+                    "details": details if isinstance(details, dict) else {},
+                }
+            )
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+    def revoke_code(
+        self,
+        principal: Principal,
+        code_id: int,
+        reason: str | None,
+    ) -> dict[str, object]:
+        self.require_admin(principal)
+        now = self._now()
+        clean_reason = reason.strip() if reason and reason.strip() else None
+        with self._connect() as connection:
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute(
+                    """
+                    SELECT id, batch_id, code_hint, status, redeemed_by_id, redeemed_at, revoked_at
+                    FROM license_codes
+                    WHERE id = ?
+                    """,
+                    (code_id,),
+                ).fetchone()
+                if row is None:
+                    raise HTTPException(status_code=404, detail="卡密不存在")
+                if row["status"] == "redeemed":
+                    raise HTTPException(status_code=409, detail="已兑换卡密不能停用，账户时长未作更改")
+                changed = row["status"] == "unused"
+                if changed:
+                    connection.execute(
+                        """
+                        UPDATE license_codes
+                        SET status = 'revoked', revoked_at = ?
+                        WHERE id = ? AND status = 'unused'
+                        """,
+                        (now, code_id),
+                    )
+                    self._audit(
+                        connection,
+                        "code_revoked",
+                        principal,
+                        now,
+                        batch_id=str(row["batch_id"]),
+                        code_hint=str(row["code_hint"]),
+                        details={"reason": clean_reason} if clean_reason else {},
+                    )
+                updated_row = connection.execute(
+                    """
+                    SELECT id, batch_id, code_hint, status, redeemed_by_id, redeemed_at, revoked_at
+                    FROM license_codes
+                    WHERE id = ?
+                    """,
+                    (code_id,),
+                ).fetchone()
+                connection.commit()
+            except HTTPException:
+                connection.rollback()
+                raise
+            except Exception:
+                connection.rollback()
+                raise
+        return {
+            "message": "卡密已停用。" if changed else "卡密此前已停用，本次没有重复操作。",
+            "changed": changed,
+            "code": self._code_row(updated_row),
+        }
+
+    def revoke_batch(
+        self,
+        principal: Principal,
+        batch_id: str,
+        reason: str | None,
+    ) -> dict[str, object]:
+        self.require_admin(principal)
+        now = self._now()
+        clean_reason = reason.strip() if reason and reason.strip() else None
+        with self._connect() as connection:
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                exists = connection.execute(
+                    "SELECT 1 FROM license_batches WHERE id = ?",
+                    (batch_id,),
+                ).fetchone()
+                if exists is None:
+                    raise HTTPException(status_code=404, detail="卡密批次不存在")
+                updated = connection.execute(
+                    """
+                    UPDATE license_codes
+                    SET status = 'revoked', revoked_at = ?
+                    WHERE batch_id = ? AND status = 'unused'
+                    """,
+                    (now, batch_id),
+                )
+                revoked_count = int(updated.rowcount)
+                if revoked_count > 0:
+                    details: dict[str, object] = {"revoked_count": revoked_count}
+                    if clean_reason:
+                        details["reason"] = clean_reason
+                    self._audit(
+                        connection,
+                        "batch_revoked",
+                        principal,
+                        now,
+                        batch_id=batch_id,
+                        details=details,
+                    )
+                connection.commit()
+            except HTTPException:
+                connection.rollback()
+                raise
+            except Exception:
+                connection.rollback()
+                raise
+        return {
+            "message": "批次中未兑换的卡密已全部停用。" if revoked_count > 0 else "该批次没有可停用的卡密。",
+            "revoked_count": revoked_count,
+            "batch": self._batch_summary(batch_id),
+        }
 
     def redeem(self, principal: Principal, code: str) -> tuple[str, dict[str, object]]:
         normalized = self._normalize_code(code)
@@ -432,9 +753,12 @@ class LicenseStore:
             raise HTTPException(status_code=403, detail="没有卡密管理权限")
 
     def _is_admin(self, principal: Principal) -> bool:
-        if principal.username != self._settings.admin_username:
-            return False
-        return self._settings.admin_user_id is None or principal.user_id == self._settings.admin_user_id
+        return (
+            self._settings.admin_user_id is not None
+            and self._settings.admin_user_id > 0
+            and principal.username == self._settings.admin_username
+            and principal.user_id == self._settings.admin_user_id
+        )
 
     def _batch_summary(self, batch_id: str) -> dict[str, object]:
         with self._connect() as connection:
@@ -469,6 +793,18 @@ class LicenseStore:
             "note": row["note"],
             "created_at": _utc_text(int(row["created_at"])),
             "created_by": str(row["created_by_username"]),
+        }
+
+    @staticmethod
+    def _code_row(row: sqlite3.Row) -> dict[str, object]:
+        return {
+            "id": int(row["id"]),
+            "batch_id": str(row["batch_id"]),
+            "code_hint": str(row["code_hint"]),
+            "status": str(row["status"]),
+            "redeemed_by_id": int(row["redeemed_by_id"]) if row["redeemed_by_id"] is not None else None,
+            "redeemed_at": _utc_text(int(row["redeemed_at"])) if row["redeemed_at"] is not None else None,
+            "revoked_at": _utc_text(int(row["revoked_at"])) if row["revoked_at"] is not None else None,
         }
 
     @staticmethod
@@ -511,20 +847,29 @@ def _remote_auth_resolver(settings: Settings, token: str) -> Principal:
     )
     try:
         with urllib.request.urlopen(request, timeout=settings.auth_timeout_seconds) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+            response_bytes = response.read(MAX_AUTH_RESPONSE_BYTES + 1)
+            if len(response_bytes) > MAX_AUTH_RESPONSE_BYTES:
+                raise ValueError("account response is too large")
+            payload = json.loads(response_bytes.decode("utf-8"))
     except urllib.error.HTTPError as error:
         if error.code in {401, 403}:
             raise HTTPException(status_code=401, detail="登录状态已失效") from error
         raise HTTPException(status_code=503, detail="账户服务暂时不可用") from error
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+    except (urllib.error.URLError, TimeoutError, UnicodeDecodeError, ValueError) as error:
         raise HTTPException(status_code=503, detail="账户服务暂时不可用") from error
 
     try:
-        return Principal(
-            user_id=int(payload["id"]),
-            username=str(payload["username"]),
-            role=str(payload.get("role", "user")),
+        raw_user_id = payload["id"]
+        if isinstance(raw_user_id, bool):
+            raise ValueError("invalid user id")
+        principal = Principal(
+            user_id=int(raw_user_id),
+            username=str(payload["username"]).strip(),
+            role=str(payload.get("role", "user")).strip(),
         )
+        if principal.user_id <= 0 or not principal.username or len(principal.username) > 128:
+            raise ValueError("invalid principal")
+        return principal
     except (KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=503, detail="账户服务返回了无效数据") from error
 
@@ -548,8 +893,18 @@ def create_app(
     public_key = public_numbers.x.to_bytes(32, "big") + public_numbers.y.to_bytes(32, "big")
     key_id = hashlib.sha256(public_key).hexdigest()[:16]
     resolve_auth = auth_resolver or (lambda token: _remote_auth_resolver(active_settings, token))
-    limiter = SlidingWindowLimiter(limit=10, window_seconds=60)
-    app = FastAPI(title="VisonCube License Service", version="1.0.0")
+    redeem_limiter = SlidingWindowLimiter(limit=10, window_seconds=60)
+    lease_limiter = SlidingWindowLimiter(limit=30, window_seconds=60)
+    app = FastAPI(title="VisonCube License Service", version="1.1.0")
+
+    @app.middleware("http")
+    async def add_security_headers(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/licenses/"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
     def authenticated_user(authorization: str | None = Header(default=None)) -> Principal:
         scheme, separator, token = (authorization or "").partition(" ")
@@ -560,6 +915,20 @@ def create_app(
     @app.get("/api/licenses/health")
     def health() -> dict[str, object]:
         return {"status": "ok", "server_time": _utc_text(clock()), "key_id": key_id}
+
+    @app.get("/api/licenses/ready")
+    def ready() -> JSONResponse:
+        checks = store.readiness()
+        is_ready = all(checks.values())
+        return JSONResponse(
+            status_code=200 if is_ready else 503,
+            content={
+                "status": "ready" if is_ready else "not_ready",
+                "server_time": _utc_text(clock()),
+                "key_id": key_id,
+                "checks": checks,
+            },
+        )
 
     @app.get("/api/licenses/public-key")
     def public_signing_key() -> dict[str, str]:
@@ -580,13 +949,27 @@ def create_app(
         principal: Principal = Depends(authenticated_user),
     ) -> dict[str, object]:
         client_host = request.client.host if request.client else "unknown"
-        if not limiter.allow(f"{principal.user_id}:{client_host}", float(clock())):
-            raise HTTPException(status_code=429, detail="兑换尝试过于频繁，请稍后再试")
+        if not redeem_limiter.allow(f"{principal.user_id}:{client_host}", float(clock())):
+            raise HTTPException(
+                status_code=429,
+                detail="兑换尝试过于频繁，请稍后再试",
+                headers={"Retry-After": "60"},
+            )
         message, current = store.redeem(principal, body.code)
         return {"message": message, "license": current}
 
     @app.post("/api/licenses/lease")
-    def issue_lease(principal: Principal = Depends(authenticated_user)) -> dict[str, object]:
+    def issue_lease(
+        request: Request,
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        client_host = request.client.host if request.client else "unknown"
+        if not lease_limiter.allow(f"{principal.user_id}:{client_host}", float(clock())):
+            raise HTTPException(
+                status_code=429,
+                detail="租约请求过于频繁，请稍后再试",
+                headers={"Retry-After": "60"},
+            )
         current = store.require_active(principal)
         issued_at = clock()
         entitlement_expiry = (
@@ -624,9 +1007,10 @@ def create_app(
     @app.get("/api/licenses/admin/batches")
     def batches(
         limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0, le=1_000_000),
         principal: Principal = Depends(authenticated_user),
     ) -> list[dict[str, object]]:
-        return store.list_batches(principal, limit)
+        return store.list_batches(principal, limit, offset)
 
     @app.post("/api/licenses/admin/batches")
     def create_batch(
@@ -634,5 +1018,51 @@ def create_app(
         principal: Principal = Depends(authenticated_user),
     ) -> dict[str, object]:
         return store.create_batch(principal, body.plan, body.quantity, body.note)
+
+    @app.get("/api/licenses/admin/overview")
+    def admin_overview(principal: Principal = Depends(authenticated_user)) -> dict[str, object]:
+        return store.admin_overview(principal)
+
+    @app.get("/api/licenses/admin/batches/{batch_id}/codes")
+    def batch_codes(
+        batch_id: str,
+        status_filter: str | None = Query(default=None, alias="status"),
+        limit: int = Query(default=100, ge=1, le=500),
+        offset: int = Query(default=0, ge=0, le=1_000_000),
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        return store.list_batch_codes(principal, batch_id, status_filter, limit, offset)
+
+    @app.post("/api/licenses/admin/codes/{code_id}/revoke")
+    def revoke_code(
+        code_id: int,
+        body: RevokeIn | None = None,
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        return store.revoke_code(principal, code_id, body.reason if body else None)
+
+    @app.post("/api/licenses/admin/batches/{batch_id}/revoke")
+    def revoke_batch(
+        batch_id: str,
+        body: RevokeIn | None = None,
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        return store.revoke_batch(principal, batch_id, body.reason if body else None)
+
+    @app.get("/api/licenses/admin/entitlements")
+    def entitlements(
+        limit: int = Query(default=100, ge=1, le=500),
+        offset: int = Query(default=0, ge=0, le=1_000_000),
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        return store.list_entitlements(principal, limit, offset)
+
+    @app.get("/api/licenses/admin/audit")
+    def audit(
+        limit: int = Query(default=100, ge=1, le=500),
+        offset: int = Query(default=0, ge=0, le=1_000_000),
+        principal: Principal = Depends(authenticated_user),
+    ) -> dict[str, object]:
+        return store.list_audit(principal, limit, offset)
 
     return app

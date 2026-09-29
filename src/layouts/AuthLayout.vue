@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import SiteFooter from '../components/SiteFooter.vue'
+</script>
+
 <template>
   <header class="guest-header">
     <RouterLink class="brand" to="/login" aria-label="VisonCube 登录">VisonCube</RouterLink>
@@ -21,5 +25,6 @@
         <slot />
       </div>
     </section>
+    <SiteFooter />
   </main>
 </template>

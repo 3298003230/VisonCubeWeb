@@ -8,7 +8,7 @@ export default defineConfig({
     port: 4173,
     proxy: {
       '/api': {
-        target: 'https://linux.sjmf.xyz',
+        target: 'https://linux.visoncube.cn',
         changeOrigin: true,
       },
     },

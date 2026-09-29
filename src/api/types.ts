@@ -83,3 +83,72 @@ export interface CreateLicenseBatchResponse {
   batch: LicenseBatchSummary
   codes: string[]
 }
+
+export type LicenseCodeStatus = 'unused' | 'redeemed' | 'revoked'
+
+export interface LicenseAdminOverview {
+  server_time: string
+  batch_count: number
+  codes: {
+    total: number
+    unused: number
+    redeemed: number
+    revoked: number
+  }
+  entitlements: {
+    total: number
+    active: number
+    expired: number
+  }
+}
+
+export interface LicenseCodeSummary {
+  id: number
+  batch_id: string
+  code_hint: string
+  status: LicenseCodeStatus
+  redeemed_by_id: number | null
+  redeemed_at: string | null
+  revoked_at: string | null
+}
+
+export interface LicenseEntitlementSummary {
+  user_id: number
+  username: string
+  state: 'active' | 'expired'
+  activated_at: string
+  expires_at: string
+  updated_at: string
+  remaining_seconds: number
+}
+
+export interface LicenseAuditEntry {
+  id: number
+  event: string
+  actor_user_id: number
+  actor_username: string
+  target_user_id: number | null
+  batch_id: string | null
+  code_hint: string | null
+  created_at: string
+  details: Record<string, unknown>
+}
+
+export interface PagedResponse<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface RevokeLicenseCodeResponse {
+  message: string
+  changed: boolean
+  code: LicenseCodeSummary
+}
+
+export interface RevokeLicenseBatchResponse {
+  message: string
+  revoked_count: number
+  batch: LicenseBatchSummary
+}
