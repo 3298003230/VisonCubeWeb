@@ -26,9 +26,9 @@ export interface ProductDefinition {
 export const products: Record<ProductId, ProductDefinition> = {
   guanshan: {
     id: 'guanshan',
-    name: '观山',
+    name: 'TV',
     software: 'VisonCube-TV',
-    description: '把影视内容留在熟悉的屏幕里，专注观看、搜索与播放。',
+    description: '沉浸式影视体验，专注内容、搜索与播放。',
     tags: ['Android', 'Android TV', '双架构'],
     sceneCore: '▶',
     releases: [
@@ -54,9 +54,9 @@ export const products: Record<ProductId, ProductDefinition> = {
   },
   tingyu: {
     id: 'tingyu',
-    name: '听雨',
+    name: 'Music',
     software: 'VisonCube-Music',
-    description: '在手机与电脑之间继续聆听，播放历史和收藏跟随同一账户。',
+    description: '跨设备保持连续聆听，播放历史和收藏跟随账户。',
     tags: ['Android', 'Windows x64', '云端同步'],
     sceneCore: 'Ⅱ',
     releases: [
@@ -76,9 +76,9 @@ export const products: Record<ProductId, ProductDefinition> = {
   },
   zhufeng: {
     id: 'zhufeng',
-    name: '逐风',
+    name: 'AI',
     software: 'VisonCube-AI',
-    description: '让识别、方向与响应聚合在一个轻量的 Windows 工具中。',
+    description: '让识别、方向与响应汇聚在一个轻量工具中。',
     tags: ['Windows x64', 'DirectML'],
     sceneCore: 'AI',
     releases: [

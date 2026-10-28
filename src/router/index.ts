@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ensureLicenseCapabilities, licenseCapabilities } from '../auth/capabilities'
 import { authState, ensureSessionRestored, hasVerifiedEmail } from '../auth/session'
 import AccountPage from '../pages/AccountPage.vue'
 import ChangePasswordPage from '../pages/ChangePasswordPage.vue'
@@ -58,29 +59,32 @@ export const router = createRouter({
       path: '/',
       name: 'home',
       component: HomePage,
-      meta: { layout: 'app', requiresAuth: true, title: '首页' },
+      meta: { layout: 'app', title: 'TV / AI / Music' },
     },
     {
-      path: '/guanshan',
-      name: 'guanshan',
+      path: '/tv',
+      name: 'tv',
       component: ProductPage,
       props: { productId: 'guanshan' },
-      meta: { layout: 'app', requiresAuth: true, title: '观山' },
+      meta: { layout: 'app', title: 'TV' },
     },
     {
-      path: '/tingyu',
-      name: 'tingyu',
+      path: '/music',
+      name: 'music',
       component: ProductPage,
       props: { productId: 'tingyu' },
-      meta: { layout: 'app', requiresAuth: true, title: '听雨' },
+      meta: { layout: 'app', title: 'Music' },
     },
     {
-      path: '/zhufeng',
-      name: 'zhufeng',
+      path: '/ai',
+      name: 'ai',
       component: ProductPage,
       props: { productId: 'zhufeng' },
-      meta: { layout: 'app', requiresAuth: true, title: '逐风' },
+      meta: { layout: 'app', title: 'AI' },
     },
+    { path: '/guanshan', redirect: { name: 'tv' } },
+    { path: '/tingyu', redirect: { name: 'music' } },
+    { path: '/zhufeng', redirect: { name: 'ai' } },
     {
       path: '/account',
       name: 'account',
@@ -101,7 +105,7 @@ export const router = createRouter({
         layout: 'app',
         requiresAuth: true,
         requiresLicenseAdmin: true,
-        title: '卡密管理',
+        title: '授权管理',
       },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -129,8 +133,9 @@ router.beforeEach(async (to) => {
     return { name: 'verify-email' }
   }
 
-  if (to.meta.requiresLicenseAdmin && session?.user.username !== '3298003230') {
-    return { name: 'account' }
+  if (to.meta.requiresLicenseAdmin) {
+    await ensureLicenseCapabilities()
+    if (!licenseCapabilities.canManageLicenses) return { name: 'account' }
   }
 
   if (to.meta.guestOnly && session) {

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
+import { ensureLicenseCapabilities, licenseCapabilities } from '../auth/capabilities'
 import { getLicenseStatus, redeemLicense } from '../api/licenses'
 import type { LicenseStatus } from '../api/types'
 import { useAuth } from '../auth/useAuth'
@@ -23,7 +24,7 @@ let clockTimer = 0
 
 const user = computed(() => auth.user.value)
 const passwordChanged = computed(() => route.query.changed === '1')
-const isLicenseAdmin = computed(() => user.value?.username === '3298003230')
+const canManageLicenses = computed(() => licenseCapabilities.canManageLicenses)
 const token = computed(() => auth.state.session?.token ?? '')
 
 const remainingSeconds = computed(() => {
@@ -134,6 +135,7 @@ const logout = async () => {
 }
 
 onMounted(() => {
+  void ensureLicenseCapabilities()
   void loadLicense()
   clock.value = performance.now()
   clockTimer = window.setInterval(() => {
@@ -212,9 +214,9 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
         <p v-if="redeemMessage" class="license-feedback success-message" role="status">{{ redeemMessage }}</p>
         <p v-if="licenseError" class="license-feedback error-message" role="alert">{{ licenseError }}</p>
 
-        <RouterLink v-if="isLicenseAdmin" class="admin-entry" to="/account/licenses">
-          <span>卡密管理</span>
-          <small>生成与查看卡密批次</small>
+        <RouterLink v-if="canManageLicenses" class="admin-entry" to="/account/licenses">
+          <span>授权管理</span>
+          <small>生成与查看授权批次</small>
         </RouterLink>
       </article>
     </div>

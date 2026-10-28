@@ -1,0 +1,10 @@
+{
+  "key": "visoncube_public_archive",
+  "name": "VisonCube · 公共影像（测试）",
+  "type": 4,
+  "api": "http://127.0.0.1:8765/api/source",
+  "danmaku": 0,
+  "searchable": 1,
+  "quickSearch": 0,
+  "changeable": 0
+}

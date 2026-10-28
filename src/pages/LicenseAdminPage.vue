@@ -262,7 +262,7 @@ const revokeCode = async (code: LicenseCodeSummary) => {
   errorMessage.value = ''
   actionMessage.value = ''
   try {
-    const response = await revokeLicenseCode(token.value, code.id, '管理员从网站停用')
+    const response = await revokeLicenseCode(token.value, code.id, '从授权管理页面停用')
     actionMessage.value = response.message
     pendingCodeRevoke.value = null
     await Promise.all([loadBatchCodes(codePage.value.offset), refreshAfterMutation()])
@@ -283,7 +283,7 @@ const revokeBatch = async (batch: LicenseBatchSummary) => {
   errorMessage.value = ''
   actionMessage.value = ''
   try {
-    const response = await revokeLicenseBatch(token.value, batch.id, '管理员从网站停用批次')
+    const response = await revokeLicenseBatch(token.value, batch.id, '从授权管理页面停用批次')
     actionMessage.value = response.message
     pendingBatchRevoke.value = ''
     await refreshAfterMutation()
@@ -335,9 +335,8 @@ onMounted(() => void loadDashboard())
     <RouterLink class="back-link" to="/account">← 返回授权中心</RouterLink>
 
     <div class="section-heading admin-heading">
-      <div><p>仅限授权管理员</p><h1 id="license-admin-title">卡密管理</h1></div>
+      <div><p>授权工具</p><h1 id="license-admin-title">授权管理</h1></div>
       <div class="admin-heading-actions">
-        <span class="admin-identity">3298003230 · 无限制</span>
         <button class="quiet-button" type="button" :disabled="loading" @click="loadDashboard">
           {{ loading ? '正在刷新…' : '刷新数据' }}
         </button>
